@@ -1,0 +1,22 @@
+# Agent vs Assistant  
+
+assistant -> chatgpt 
+
+agent -> git workspace / bolt.new -> can work independant
+
+
+# framework agents 
+
+we have crew ai a framework that can help you task done thrugh agent or multiple agents  it can work with local llms 
+
+
+# env setup 
+
+python3 -m venv crew 
+source crew/bin/activate 
+
+pip3 install crewai
+
+crewai create crew devops-ai-project  (choose llm provider (it must be installed on your machine ))
+
+
