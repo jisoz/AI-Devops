@@ -1,0 +1,60 @@
+https://docs.docker.com/ai/model-runner
+
+Docker Model Runner (DMR) is a Docker feature that allows you to run AI models (LLMs) locally on your computer using Docker, without needing to rely on cloud AI APIs such as OpenAI, Anthropic, or Gemini.
+
+Think of it as Docker Engine, but for managing and running local AI models.
+
+For example, you can run models such as Llama, Gemma, or Qwen locally and interact with them through an API.
+
+The architecture is relatively simple:
+1. Docker Model Runner: Manages the AI model runtime.
+2. AI Model: The actual LLM, such as Llama or Qwen.
+3. API: Exposes an endpoint that applications can call.
+4. Your application: Sends prompts and receives AI-generated responses.
+Your application can communicate with the model through an OpenAI-compatible API.
+
+
+docker hub for ai : https://hub.docker.com/u/ai
+
+
+
+If Docker Model Runner is enabled in Docker Desktop, you can use PowerShell:
+
+# Check Model Runner status
+docker model status
+
+# Download a model
+docker model pull ai/qwen3
+
+# List downloaded models
+docker model ls
+
+# Run the model
+docker model run ai/qwen3
+
+docker model rm .. 
+
+
+
+
+You can then chat with the model directly in your terminal.
+
+You don't need to create a Dockerfile or manually configure a container for every model. Docker manages the model and its inference runtime
+
+
+3. Why is this useful?
+Benefit	Explanation
+Privacy	Prompts can stay on your machine
+Cost	No per-token cloud API charges
+Offline use	You can use downloaded models without internet
+Integration	Connect your applications through an API
+Development	Test AI applications without a cloud provider
+
+4. Docker Model Runner vs Ollama
+These solve similar problems.
+Feature	Docker Model Runner	Ollama
+Run LLMs locally	Yes	Yes
+Model management	Docker CLI	Ollama CLI
+OpenAI-compatible API	Yes	Yes
+Docker ecosystem integration	Native	External integration
+Multiple inference engines	Yes	Primarily Ollama runtime
