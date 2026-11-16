@@ -17,6 +17,41 @@ Your application can communicate with the model through an OpenAI-compatible API
 docker hub for ai : https://hub.docker.com/u/ai
 
 
+1. Why is there no token cost?
+When you use OpenAI's API, the process looks like this:
+Cloud AI — pay per token
+Your application
+Send prompt over internet
+
+OpenAI servers run the model
+Receive generated response
+
+Usage-based API bill
+
+Docker Model Runner — local inference
+Your application
+
+Docker Model Runner + local LLM
+
+Your CPU / GPU / RAM performs the computation
+No per-token API bill
+
+The model is downloaded once and stored locally. When you send 1,000 prompts, your machine processes those prompts rather than sending them to a paid inference provider.
+
+However, free doesn't mean zero operating cost.
+
+You still pay indirectly for:
+- Electricity.
+- Hardware (GPU, RAM, CPU).
+- Storage.
+- Server infrastructure if you deploy it on a cloud VM.
+- Maintenance and scaling.
+For example, if you rent a GPU server on AWS or another cloud provider, you pay for the GPU/server hours even if you don't pay per token.
+
+
+
+
+
 
 If Docker Model Runner is enabled in Docker Desktop, you can use PowerShell:
 
@@ -58,3 +93,238 @@ Model management	Docker CLI	Ollama CLI
 OpenAI-compatible API	Yes	Yes
 Docker ecosystem integration	Native	External integration
 Multiple inference engines	Yes	Primarily Ollama runtime
+
+
+
+# Real-world integration examples
+
+Example A — AI-powered DevOps monitoring
+Very practical use case
+Imagine you manage 20 Linux servers and Kubernetes clusters.
+
+You already have:
+- Prometheus for metrics.
+- Grafana for dashboards.
+- Loki for logs.
+- Alertmanager for alerts.
+You add Docker Model Runner as the AI analysis component.
+
+How the workflow works:
+1. Prometheus detects CPU usage above 90%.
+2. Alertmanager sends a webhook to your backend.
+3. Your backend retrieves the relevant logs from Loki.
+4. It sends the logs and metrics to Docker Model Runner.
+5. The LLM analyzes the situation.
+6. Your backend sends an explanation to Slack or Microsoft Teams
+
+example ai prompt : 
+
+<!-- Infrastructure incident analysis
+High severity
+
+Incident: Kubernetes pod experiencing high memory consumption.
+
+Findings:
+- Memory increased from 2 GB to 5.8 GB.
+- CPU usage remains normal.
+- Application logs show repeated cache initialization.
+Possible cause: Memory leak or uncontrolled cache growth.
+
+Recommended actions:
+1. Inspect cache eviction settings.
+2. Review application memory profiling.
+3. Consider increasing memory limits temporarily.
+Illustrative AI-generated report, not a live incident. -->
+
+You could build this without paying a cloud LLM provider for every incident analysis.
+
+Important: Prometheus performs the monitoring, and your forecasting algorithms detect trends. The LLM interprets the evidence and explains it. You should validate recommendations before allowing automated remediation.
+
+Example B — AI assistant for Kubernetes
+Imagine a DevOps engineer asks:
+Why is my application pod restarting?
+
+Your application retrieves:
+
+kubectl describe pod my-api
+kubectl logs my-api --previous
+kubectl get events
+
+It sends the output to the local LLM.
+
+The LLM might respond:
+
+Root cause:
+The container exceeded its memory limit.
+
+Evidence:
+- Exit code: 137
+- OOMKilled: true
+- Memory limit: 512Mi
+
+Recommended actions:
+1. Investigate memory consumption.
+2. Review recent application changes.
+3. Consider adjusting memory limits.
+
+
+# How do you actually connect an application to Docker Model Runner?
+
+This is the interesting technical part.
+
+Docker Model Runner exposes an OpenAI-compatible API.
+
+For example, your application can send requests to:  http://localhost:12434/engines/v1
+
+You can use the OpenAI SDK even though you're not connecting to OpenAI's servers. 
+Docker Docs+1
+
+
+Here is a real Node.js integration.
+
+Step 1 — Download a model 
+
+``` docker model pull ai/qwen3 ```
+
+Step 2 — Install the SDK
+
+``` npm install openai ``` 
+
+
+Step 3 — Create your integration
+
+<!-- 
+import OpenAI from "openai";
+
+const ai = new OpenAI({
+  baseURL: "http://localhost:12434/engines/v1",
+  apiKey: "not-needed"
+});
+
+async function analyzeIncident(logs) {
+  const response = await ai.chat.completions.create({
+    model: "ai/qwen3",
+    messages: [
+      {
+        role: "system",
+        content: "You are a DevOps incident analysis assistant."
+      },
+      {
+        role: "user",
+        content: `Analyze these infrastructure logs:
+        ${logs}`
+      }
+    ]
+  });
+
+  return response.choices[0].message.content;
+}
+
+const result = await analyzeIncident(
+  "Container OOMKilled. Memory usage 98%."
+);
+
+console.log(result); -->
+
+
+That's it. Your Node.js application communicates with a locally running model.
+
+No OpenAI API key, no OpenAI token billing.
+
+The exact model identifier should match the model you pulled and its API listing.
+
+
+# 4. What if your application is also running inside Docker?
+This is where Docker Model Runner becomes particularly interesting.
+
+Imagine your infrastructure:
+
+Docker environment
+Your application
+
+Node.js / Python / NestJS
+
+HTTP API
+
+Docker Model Runner
+
+Local inference engine
+
+
+Qwen / Llama / Gemma
+
+Downloaded model running on your hardware
+
+
+- When your application runs inside another Docker container, it can reach Docker Desktop's Model Runner using: http://model-runner.docker.internal
+
+For example, the OpenAI-compatible endpoint becomes: http://model-runner.docker.internal/engines/v1
+
+You can integrate this with Docker Compose, Python, Node.js, LangChain and other frameworks.
+
+
+5. Other tools you can integrate
+Tool	What it does with Model Runner
+n8n	AI-powered workflow automation
+Open WebUI	ChatGPT-like interface for local models
+LangChain	Build LLM applications and agents
+Spring AI	Integrate AI into Java applications
+Continue	Local AI coding assistant
+MCP Gateway	Connect AI agents to external tools
+
+Docker also provides an official hands-on lab combining Model Runner, Docker Compose and MCP Gateway.
+
+
+6. One important consideration: Is it production-ready?
+You need to distinguish between running a local model and operating an AI service for hundreds of users.
+Scenario	Suitability
+Personal AI assistant	Excellent
+Development and testing	Excellent
+Internal company assistant	Good
+DevOps incident analysis	Good
+Hundreds of concurrent users	Requires proper GPU infrastructure and scaling
+Mission-critical AI service	Requires reliability, monitoring, security and fallback mechanisms
+
+Also, Docker Model Runner's API is not authenticated by default. Don't expose it directly to the public internet
+
+7. What I would build as a practical project
+I'd recommend building an AI DevOps Incident Analyzer.
+Practical portfolio project
+
+
+
+Technology stack:
+Component	Technology
+Infrastructure	Docker + Kubernetes
+Metrics	Prometheus
+Visualization	Grafana
+Logs	Loki
+AI model	Qwen through Docker Model Runner
+Backend	NestJS
+Automation	n8n
+Notifications	Slack
+
+
+workflow : 
+Kubernetes
+    |
+    v
+Prometheus + Loki
+    |
+    v
+Alertmanager
+    |
+    v
+NestJS Backend
+    |
+    v
+Docker Model Runner
+    |
+    v
+AI Incident Analysis
+    |
+    v
+n8n Workflow
+    |
+    v
+Slack Notification
