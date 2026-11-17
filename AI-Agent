@@ -10,6 +10,12 @@ agent -> git workspace / bolt.new -> can work independant
 we have crew ai a framework that can help you task done thrugh agent or multiple agents  it can work with local llms 
 
 
+crew ai / autogen / langgraph 
+
+crew ai -> you hgave crews (multiple agents) wich can integrate with each other to perform the task autonomusly
+
+
+
 # env setup 
 
 python3 -m venv crew 
@@ -20,3 +26,8 @@ pip3 install crewai
 crewai create crew devops-ai-project  (choose llm provider (it must be installed on your machine ))
 
 
+it will create agents.yaml and tasks.yaml files 
+main.py -> initialization of  porject
+crew.py has the actual code  -. using the agents and task yaml files 
+
+we can go to crewai examples in github to check examples 

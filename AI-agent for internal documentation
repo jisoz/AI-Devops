@@ -1,0 +1,292 @@
+# Retool 
+
+Retool Agents is a platform for building AI agents that can interact with your company's systems, retrieve information, make decisions, and execute business tasks.
+
+Think of it as a combination of:
+- An AI model (GPT, Claude, etc.).
+- A tool-integration platform.
+- A workflow automation engine.
+- An environment to build, test, deploy, and monitor AI agents.
+The important distinction: Retool Agent is not just a chatbot. It can actually perform actions using tools you give it permission to access.
+
+
+1. How does it work?
+
+Every agent has four main components:
+1. Instructions: Define what the agent should do.
+2. Model: The LLM responsible for reasoning.
+3. Tools: APIs, database queries, functions, workflows, and integrations.
+4. Triggers: How the agent gets invoked, such as chat, email, or a workflow.
+
+# example: an Internal Company Documentation AI Agent using Retool Agents.
+
+Imagine you're working at Lexzur. The company has hundreds or thousands of internal documents, including:
+- Installation guides.
+- Deployment procedures.
+- Troubleshooting manuals.
+- API documentation.
+- Kubernetes configuration guides.
+- Employee onboarding documentation.
+- Internal IT policies.
+- Previous incident reports.
+
+
+Currently, employees have to search through folders, PDFs, Confluence pages or internal knowledge bases to find answers.
+
+You want employees to ask questions in natural language and have an AI agent find the relevant information and answer them.
+
+1. What are we building?
+
+example : Employee asks:
+
+"How do I deploy App4Legal on a Rocky Linux 9 server?"
+
+AI agent responds:
+
+"According to the internal deployment documentation, the deployment requires:
+1. Prepare a Rocky Linux 9 server.
+2. Install the required PHP version and extensions.
+3. Configure the database.
+4. Configure the web server.
+5. Deploy the application package.
+I also found a troubleshooting guide for PHP database driver errors."
+
+
+
+
+2. Architecture: how the agent finds company documents
+
+## A. Document ingestion — prepare the knowledge
+
+Company documents
+
+PDF · DOCX · Confluence · SharePoint
+
+
+Document processing
+
+Extract text and split into smaller chunks
+
+
+Embedding model
+
+Convert text into numerical vectors
+
+
+Vector database
+
+Store document chunks, embeddings and metadata
+
+
+
+- For example, suppose your deployment manual contains 100 pages.
+
+You don't send all 100 pages to the AI every time someone asks a question.
+
+Instead, you split the document into smaller pieces.
+Chunk	Content
+1	Rocky Linux prerequisites
+2	PHP installation
+3	Database configuration
+4	Nginx configuration
+5	Troubleshooting
+
+Each chunk gets an embedding, which represents its semantic meaning.
+
+## B. Question answering — retrieve relevant knowledge
+
+Employee asks a question
+
+Retool Agent receives the question
+
+Agent calls its Search Documentation tool
+
+Vector database finds relevant chunks
+
+LLM generates an answer using retrieved content
+
+Employee receives answer with document references
+
+
+3. Let's actually create the Retool Agent
+We'll use this stack:
+Component	Technology
+Agent	Retool Agents
+AI model	GPT or Claude
+Document storage	Google Drive / SharePoint
+Document processing	Python or Retool Workflow
+Embeddings	An embedding model
+Vector database	PostgreSQL + pgvector
+Retrieval tool	Retool Function or Workflow
+
+You can replace the cloud AI model with a locally hosted model later, but first let's get the architecture working.
+
+
+
+Step 1 — Create the agent
+In Retool:
+1. Open Agents.
+2. Click + Agent.
+3. Select Start from scratch.
+4. Name it Internal Documentation Assistant.
+5. Add a description: An AI assistant that answers employee questions
+using verified internal company documentation.
+
+Retool provides an agent configuration screen where you select your AI provider, instructions, tools and triggers.
+
+Step 2 — Configure the agent instructions
+This is the system-level behavior you give your agent.
+
+
+You are an Internal Company Documentation Assistant.
+
+Your responsibility is to answer employee questions
+using the company's internal documentation.
+
+RULES:
+
+1. Always search the internal documentation before
+   answering technical or company-specific questions.
+
+2. Only use information returned by the documentation
+   search tool for company-specific answers.
+
+3. Never invent procedures, configurations, commands,
+   policies or technical details.
+
+4. Always provide the document name and relevant
+   section as a source.
+
+5. If the documentation does not contain the answer,
+   clearly state that you could not find the information.
+
+6. If multiple documents contradict each other,
+   explain the conflict and identify their versions.
+
+7. Never expose confidential information to employees
+   who are not authorized to access it.
+
+8. Provide clear, structured and practical answers.
+
+
+This is important because you are defining the agent's responsibilities and boundaries, not just asking it to behave like ChatGPT.
+
+
+
+Step 3 — Create the Search Documentation tool
+
+his is the most important part.
+
+Your agent needs a tool named:
+
+search_internal_documentation
+
+Its job is to accept an employee's question and retrieve the most relevant document sections.
+
+In Retool:
+1. Go to your agent's Configuration.
+2. Click + Add Tool.
+3. Create a custom Function or connect a Workflow.
+4. Give it the name search_internal_documentation.
+5. Add an input parameter called question.
+6. Connect it to your PostgreSQL resource containing the document chunks.
+Retool supports custom functions, workflows and external MCP tools as agent tools. 
+Retool Docs+1
+
+
+Here is what the tool conceptually does:
+
+<!-- 
+SELECT
+    document_name,
+    section_title,
+    content,
+    page_number,
+    source_url
+FROM documentation_chunks
+ORDER BY embedding <=> :question_embedding
+LIMIT 5; -->
+
+
+This example uses PostgreSQL's pgvector cosine-distance operator.
+
+The question_embedding must be generated using the same embedding model used when indexing your documents.
+
+<!-- The result might look like this:
+
+[
+  {
+    "document_name": "Linux Deployment Guide.pdf",
+    "section_title": "PHP Configuration",
+    "content": "Install PHP 8.3 and required extensions...",
+    "page_number": 14,
+    "source_url": "internal-docs/linux-deployment"
+  },
+  {
+    "document_name": "Troubleshooting.docx",
+    "section_title": "Database Driver",
+    "content": "Verify that the PDO MySQL extension is enabled...",
+    "page_number": 8,
+    "source_url": "internal-docs/troubleshooting"
+  }
+] -->
+
+
+The agent receives these results and uses them to construct its response.
+
+Step 4 — Give the agent another tool: Get Document Details
+You can create another tool:
+
+get_document_details
+
+Parameters:
+- Document ID.
+- Section name.
+Its responsibility is to retrieve the full section when the search tool only returns a small excerpt.
+
+This gives you a useful combination:
+- Search tool: finds relevant information.
+- Details tool: retrieves additional context.
+You don't need 20 tools. Start with these two.
+
+tep 5 — Test the agent
+Open the Chats tab and try these questions:
+
+
+
+4. How do new documents enter the AI knowledge base?
+This is what makes it a real company solution rather than a demo.
+
+Imagine an employee uploads a new deployment manual to SharePoint.
+
+You create an automated ingestion workflow:
+
+
+New document uploaded
+
+
+Retool Workflow triggered
+
+
+Extract document text
+
+
+Split into chunks
+
+
+Generate embeddings
+
+
+Update PostgreSQL + pgvector
+
+
+You also need to handle document updates and deletions so employees don't receive outdated instructions.
+
+For a production system, consider:
+- Document versioning.
+- Department-level access control.
+- Document expiration.
+- Source permissions inherited from SharePoint or Confluence.
+- Re-indexing when documents change.
+Very important: Don't rely only on the AI agent's instructions for security. The retrieval tool itself must enforce employee permissions before returning document content.
+![alt text](image.png)
